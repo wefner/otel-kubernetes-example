@@ -1,0 +1,61 @@
+mode: deployment
+
+config:
+  exporters:
+    otlp:
+      endpoint: tempo-distributor:4317
+      tls:
+        insecure: true
+
+    loki:
+      endpoint: http://loki-distributed-gateway/loki/api/v1/push
+
+    debug: {}
+
+    otlphttp/prometheus:
+      endpoint: http://kube-prometheus-stack-prometheus.monitoring:9090/api/v1/otlp
+      tls:
+        insecure: true
+
+    prometheusremotewrite:
+      endpoint: http://kube-prometheus-stack-prometheus.monitoring:9090/api/v1/write
+
+  processors:
+    batch: {}
+    memory_limiter: null
+
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: ${env:MY_POD_IP}:4317
+
+  service:
+    pipelines:
+      logs:
+        exporters:
+          - debug
+          - loki
+        processors:
+          - memory_limiter
+          - batch
+        receivers:
+          - otlp
+      metrics:
+        exporters:
+          - debug
+          - otlphttp/prometheus
+        processors:
+          - memory_limiter
+          - batch
+        receivers:
+          - otlp
+      traces:
+        exporters:
+          - debug
+          - otlp
+        processors:
+          - memory_limiter
+          - batch
+        receivers:
+          - otlp

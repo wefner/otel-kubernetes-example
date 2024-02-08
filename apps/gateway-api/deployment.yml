@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-api
+spec:
+  selector:
+    matchLabels:
+      app: gateway-api
+  template:
+    metadata:
+      labels:
+        app: gateway-api
+    spec:
+      containers:
+        - image: registry.localhost/fabreteca/gateway-api
+          name: gateway-api
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://opentelemetry-collector.monitoring.svc.cluster.local:4317
+            - name: OTEL_TRACES_EXPORTER
+              value: otlp
+            - name: OTEL_LOGS_EXPORTER
+              value: otlp
+            - name: OTEL_PYTHON_FLASK_EXCLUDED_URLS
+              value: favicon.ico
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: service.name=gateway-api
+            - name: BACKEND_SERVER_ENDPOINT
+              value: http://activities-api:5000
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          resources:
+            limits:
+              cpu: 100m
+              memory: 300Mi
+            requests:
+              cpu: 100m
+              memory: 300Mi
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+              name: app

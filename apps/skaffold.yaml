@@ -1,0 +1,37 @@
+---
+apiVersion: skaffold/v4beta9
+kind: Config
+build:
+  local:
+    push: true
+  artifacts:
+    - image: registry.localhost/fabreteca/gateway-api
+      context: ../src/gateway-api
+      sync:
+        infer:
+          - poetry.lock
+          - pyproject.toml
+      docker:
+        dockerfile: ../src/gateway-api/Dockerfile
+
+    - image: registry.localhost/fabreteca/activities-api
+      context: ../src/activities-api
+      sync:
+        infer:
+          - poetry.lock
+          - pyproject.toml
+      docker:
+        dockerfile: ../src/activities-api/Dockerfile
+
+profiles:
+  - name: apps
+
+manifests:
+  kustomize:
+    paths:
+      - gateway-api
+      - activities-api
+
+deploy:
+  kubectl: {}
+  kubeContext: k3d-fabreteca-local

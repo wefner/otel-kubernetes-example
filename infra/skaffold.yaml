@@ -1,0 +1,142 @@
+---
+apiVersion: skaffold/v4beta8
+kind: Config
+metadata:
+  name: monitoring
+profiles:
+  - name: monitoring
+deploy:
+  helm:
+    releases:
+      - name: kube-prometheus-stack
+        remoteChart: kube-prometheus-stack
+        namespace: monitoring
+        version: 56.0.3
+        createNamespace: true
+        repo: https://prometheus-community.github.io/helm-charts
+        upgradeOnChange: true
+        valuesFiles:
+          - monitoring/kube-prometheus-stack-values.yaml
+
+---
+apiVersion: skaffold/v4beta8
+kind: Config
+metadata:
+  name: tempo
+profiles:
+  - name: monitoring
+deploy:
+  helm:
+    releases:
+      - name: tempo
+        remoteChart: tempo-distributed
+        namespace: monitoring
+        version: 1.8.2
+        createNamespace: false
+        repo: https://grafana.github.io/helm-charts
+        upgradeOnChange: true
+        valuesFiles:
+          - monitoring/tempo-values.yaml
+
+---
+apiVersion: skaffold/v4beta8
+kind: Config
+metadata:
+  name: nginx
+profiles:
+  - name: nginx
+deploy:
+  helm:
+    releases:
+      - name: ingress-nginx
+        remoteChart: ingress-nginx
+        namespace: ingress-nginx
+        version: 4.9.0
+        createNamespace: true
+        repo: https://kubernetes.github.io/ingress-nginx
+        upgradeOnChange: true
+        setValues:
+          controller.metrics.enabled: true
+          controller.metrics.serviceMonitor.enabled: true
+
+---
+apiVersion: skaffold/v4beta8
+kind: Config
+metadata:
+  name: cert-manager
+profiles:
+  - name: cert-manager
+deploy:
+  helm:
+    releases:
+      - name: cert-manager
+        remoteChart: cert-manager
+        namespace: cert-manager
+        version: v1.13.3
+        createNamespace: true
+        repo: https://charts.jetstack.io
+        upgradeOnChange: true
+        setValues:
+          installCRDs: true
+
+---
+apiVersion: skaffold/v4beta8
+kind: Config
+metadata:
+  name: otel-collector
+requires:
+  - configs:
+      - cert-manager
+deploy:
+  helm:
+    releases:
+      - name: opentelemetry-collector
+        remoteChart: opentelemetry-collector
+        namespace: monitoring
+        version: 0.80.0
+        createNamespace: false
+        repo: https://open-telemetry.github.io/opentelemetry-helm-charts
+        upgradeOnChange: true
+        valuesFiles:
+          - monitoring/collector-values.yaml
+
+---
+apiVersion: skaffold/v4beta8
+kind: Config
+metadata:
+  name: loki
+profiles:
+  - name: loki
+deploy:
+  helm:
+    releases:
+      - name: loki-distributed
+        remoteChart: loki-distributed
+        namespace: monitoring
+        version: 0.78.2
+        createNamespace: false
+        repo: https://grafana.github.io/helm-charts
+        upgradeOnChange: true
+
+---
+apiVersion: skaffold/v4beta8
+kind: Config
+metadata:
+  name: mongo
+profiles:
+  - name: mongo
+manifests:
+  rawYaml:
+    - db.yaml
+deploy:
+  kubectl:
+    defaultNamespace: otel-demo
+  helm:
+    releases:
+      - name: mongodb-community-operator
+        remoteChart: community-operator
+        namespace: otel-demo
+        version: 0.9.0
+        createNamespace: true
+        repo: https://mongodb.github.io/helm-charts
+        upgradeOnChange: true

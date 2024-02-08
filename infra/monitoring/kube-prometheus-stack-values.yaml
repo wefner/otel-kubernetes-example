@@ -1,0 +1,106 @@
+alertmanager:
+  enabled: false
+  alertmanagerSpec:
+    resources:
+      limits:
+        cpu: 200m
+        memory: 100Mi
+      requests:
+        cpu: 100m
+        memory: 50Mi
+
+grafana:
+  sidecar:
+    dashboards:
+      labelValue: true
+      searchNamespace: ALL
+  grafana.ini:
+    auth:
+      disable_login_form: true
+    auth.anonymous:
+      enabled: true
+      org_role: Admin
+    feature_toggles:
+      enable: traceToMetrics
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - grafana.localhost
+  additionalDataSources:
+    - name: Loki
+      uid: loki
+      type: loki
+      access: proxy
+      url: http://loki-distributed-query-frontend:3100
+      jsonData:
+        maxLines: 1000
+    - name: Tempo
+      uid: tempo
+      type: tempo
+      access: proxy
+      url: http://tempo-query-frontend:3100
+      jsonData:
+        tracesToMetrics:
+          datasourceUid: prometheus
+          spanStartTimeShift: '1h'
+          spanEndTimeShift: '-1h'
+          tags: [ { key: 'http.host', value: 'host' } ]
+          queries:
+            - name: success rate
+              query: |
+                (sum(rate(nginx_ingress_controller_requests{status=~"2..", $$__tags}[1m])) by (ingress,cluster))
+                /
+                (sum(rate(nginx_ingress_controller_requests[1m])) by (ingress) * 100 > 5)
+            - name: p95 latency
+              query: |
+                histogram_quantile(0.95,sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{$$__tags}[15m])) by (le,ingress)) > 1.5
+            - name: error rate
+              query: |
+                (sum(rate(nginx_ingress_controller_requests{status=~'5..', $$__tags}[1m])) by (ingress,cluster))
+                /
+                (sum(rate(nginx_ingress_controller_requests[1m])) by (ingress) * 100 > 5)
+        traceQuery:
+          timeShiftEnabled: true
+          spanStartTimeShift: '1h'
+          spanEndTimeShift: '-1h'
+        tracesToLogsV2:
+          datasourceUid: loki
+          spanStartTimeShift: '1h'
+          spanEndTimeShift: '-1h'
+          filterByTraceID: true
+          filterBySpanID: true
+          tags: [ {key: 'service.name', value: 'job'} ]
+        serviceMap:
+          datasourceUid: prometheus
+        nodeGraph:
+          enabled: true
+
+nodeExporter:
+  enabled: false
+
+prometheus:
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - prometheus.localhost
+  prometheusSpec:
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    enableFeatures:
+      - otlp-write-receiver
+
+kubeStateMetrics:
+  enabled: false
+
+prometheusOperator:
+  enabled: true
+  resources:
+    limits:
+     cpu: 200m
+     memory: 100Mi
+    requests:
+     cpu: 100m
+     memory: 50Mi

@@ -1,0 +1,38 @@
+# https://github.com/mongodb/mongodb-kubernetes-operator/blob/v0.9.0/config/samples/mongodb.com_v1_mongodbcommunity_cr.yaml
+
+---
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
+metadata:
+  name: otel-mongodb
+spec:
+  members: 3
+  type: ReplicaSet
+  version: "7.0.5"
+  security:
+    authentication:
+      modes: ["SCRAM"]
+  users:
+    - name: mongo
+      db: admin
+      passwordSecretRef: # a reference to the secret that will be used to generate the user's password
+        name: mongo-password
+      roles:
+        - name: clusterAdmin
+          db: admin
+        - name: root
+          db: admin
+      scramCredentialsSecretName: my-scram
+  additionalMongodConfig:
+    storage.wiredTiger.engineConfig.journalCompressor: zlib
+
+# the user credentials will be generated from this secret
+# once the credentials are generated, this secret is no longer required
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongo-password
+type: Opaque
+stringData:
+  password: password

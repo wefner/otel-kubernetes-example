@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: activities-api
+spec:
+  selector:
+    matchLabels:
+      app: activities-api
+  template:
+    metadata:
+      labels:
+        app: activities-api
+    spec:
+      containers:
+        - image: registry.localhost/fabreteca/activities-api
+          name: activities-api
+          env:
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://opentelemetry-collector.monitoring.svc.cluster.local:4317
+            - name: OTEL_TRACES_EXPORTER
+              value: otlp
+            - name: OTEL_METRICS_EXPORTER
+              value: otlp
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: service.name=activities-api
+            - name: OTEL_LOGS_EXPORTER
+              value: otlp
+            - name: MONGODB_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: otel-mongodb-admin-mongo
+                  key: connectionString.standard
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          resources:
+            limits:
+              cpu: 100m
+              memory: 300Mi
+            requests:
+              cpu: 100m
+              memory: 300Mi
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+              name: app

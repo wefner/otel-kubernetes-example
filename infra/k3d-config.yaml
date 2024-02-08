@@ -1,0 +1,41 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+
+image: docker.io/rancher/k3s:v1.29.0-k3s1
+
+metadata:
+  name: fabreteca-local
+
+kubeAPI:
+  host: localhost
+  hostPort: "6443"
+
+servers: 1
+agents: 1
+
+ports:
+  - port: 80:80
+    nodeFilters:
+      - loadbalancer
+  - port: 443:443
+    nodeFilters:
+      - loadbalancer
+
+registries:
+  create:
+    name: registry.localhost
+    hostPort: "5000"
+    volumes:
+      - registry-localhost-var-metrics-registry:/var/metrics/registry
+  config: |
+    mirrors:
+      localhost:5000:
+        endpoint:
+        - http://registry.localhost:5000
+
+options:
+  k3s:
+    extraArgs:
+    - arg: "--disable=traefik"
+      nodeFilters:
+      - "server:*"
