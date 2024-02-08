@@ -58,7 +58,7 @@ def get_activities():
             act = activities.insert_one(response.json()).inserted_id
             logger.warning(f"Logged with id {act}")
 
-    return jsonify({"status": response.status_code, "activity": response.json()})
+    return response.json()
 
 
 def main():
