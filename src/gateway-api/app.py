@@ -42,7 +42,10 @@ def get_activities(endpoint):
             raise HTTPError
 
         logger.warning("Getting an activity")
-        logger.info("Getting activity!!")
+
+        # Won't show INFO. Bug from OTLP log exporter
+        # https://github.com/open-telemetry/opentelemetry-python/issues/3473
+        logger.info("Getting an activity")
         response = requests.get(url)
 
         if response.status_code == 200:
