@@ -10,15 +10,12 @@ config:
     loki:
       endpoint: http://loki-distributed-gateway/loki/api/v1/push
 
-    debug: {}
-
     otlphttp/prometheus:
       endpoint: http://kube-prometheus-stack-prometheus.monitoring:9090/api/v1/otlp
       tls:
         insecure: true
 
-    prometheusremotewrite:
-      endpoint: http://kube-prometheus-stack-prometheus.monitoring:9090/api/v1/write
+    debug: {}
 
   processors:
     batch: {}
