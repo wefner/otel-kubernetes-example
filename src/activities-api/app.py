@@ -34,17 +34,15 @@ def get_activities():
     url = "https://www.boredapi.com/api/activity"
     response = requests.get(url)
 
-    duration_milliseconds = max(
-        round((datetime.now() - start_time).total_seconds() * 1000), 0
-    )
+    duration_milliseconds = round((datetime.now() - start_time).total_seconds() * 1000)
 
     ACTIVITIES_API_DURATION_HISTOGRAM.record(
         duration_milliseconds, {"status_code": response.status_code}
     )
 
     with tracer.start_as_current_span("MongoDB Connection"):
-        db = client.otel
-        activities = db.act
+        otel_db = client.otel
+        activities_collection = otel_db.activities
 
         with tracer.start_as_current_span("activities.insertOne"):
             current_span = trace.get_current_span()
@@ -55,8 +53,8 @@ def get_activities():
             current_span.set_attribute(SpanAttributes.DB_NAME, "otel")
             current_span.set_attribute(SpanAttributes.DB_OPERATION, "insertOne")
 
-            act = activities.insert_one(response.json()).inserted_id
-            logger.warning(f"Logged with id {act}")
+            activity = activities_collection.insert_one(response.json()).inserted_id
+            logger.warning(f"Logged with id {activity}")
 
     return response.json()
 

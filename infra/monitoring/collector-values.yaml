@@ -11,7 +11,7 @@ config:
       endpoint: http://loki-distributed-gateway/loki/api/v1/push
 
     otlphttp/prometheus:
-      endpoint: http://kube-prometheus-stack-prometheus.monitoring:9090/api/v1/otlp
+      endpoint: http://kube-prometheus-stack-prometheus:9090/api/v1/otlp
       tls:
         insecure: true
 
